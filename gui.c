@@ -8,8 +8,8 @@
 #include "dijkstras.h"
 #include "raylib.h"
 
-#define SW 640 // 1920 // 640 // 1280
-#define SH 340 // 1080 // 340 // 720
+#define SW 640 // 800 // 1920 // 640 // 1280
+#define SH 340 // 600 // 1080 // 340 // 720
 
 #define TARGET_FPS 60
 
@@ -642,6 +642,11 @@ int main(void) {
         DrawLineEx(*gs.edgesSelected->items[0].startPoint, mousePoint, 4.0f,
                    BLUE);
       }
+    }
+
+    if (gc.count == 0) {
+      DrawText("Click on + Vertex to start creating a graph",
+               (SW / 2) - (SW / 6), SH / 20, defaultFontSize, BLACK);
     }
 
     EndDrawing();
