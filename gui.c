@@ -8,8 +8,8 @@
 #include "dijkstras.h"
 #include "raylib.h"
 
-#define SW 640 // 800 // 1920 // 640 // 1280
-#define SH 340 // 600 // 1080 // 340 // 720
+#define SW 800 // 800 // 1920 // 640 // 1280
+#define SH 600 // 600 // 1080 // 340 // 720
 
 #define TARGET_FPS 60
 
@@ -74,6 +74,8 @@ void arena_init(TextArena *ta, void *backing_buffer,
   ta->buf_len = backing_buffer_length;
   ta->offset = 0;
 }
+
+void arena_free_all(TextArena *ta) { ta->offset = 0; }
 
 ////////////////////////////////////////////
 
@@ -267,7 +269,8 @@ void CreateEdge(GuiCircles *gc, Vector2 mp, Button *btn, GameState *gs,
   }
 }
 
-void CreateVertex(Circle defaultCircle, GuiCircles *gc, TextArena *ta) {
+void CreateVertex(Circle defaultCircle, GuiCircles *gc, TextArena *ta,
+                  Button *btn) {
   Circle new_circle = defaultCircle;
   char buf[12];
   sprintf(buf, "%zu", gc->count);
@@ -277,6 +280,17 @@ void CreateVertex(Circle defaultCircle, GuiCircles *gc, TextArena *ta) {
 
   new_circle.label = new_label;
   da_append(gc, new_circle);
+  btn->action = false;
+}
+
+void ClearGuiGraph(GuiCircles *gc, GuiEdges *ge, TextArena *ta, Button *btn) {
+  da_free(gc);
+  *gc = (GuiCircles){0};
+  da_free(ge);
+  *ge = (GuiEdges){0};
+  arena_free_all(ta);
+
+  btn->action = false;
 }
 
 void HandleCircleMouseAction(Vector2 mp, Circle *c) {
@@ -458,6 +472,15 @@ void InitButtons(GuiButtons *b) {
       .action = false,
       .text = "Solve",
   };
+  b->btnReset = (Button){
+      .boundaryBox = {(float)SW - ((float)SW / 10), 5.0f, (float)SW / 11,
+                      (float)SH / 25},
+      .color = BLUE,
+      .postion = {(float)SW - ((float)SW / 10), 5.0f},
+      .state = 0,
+      .action = false,
+      .text = "Reset",
+  };
 };
 
 void DrawButtons(GuiButtons *b, const int fontSize) {
@@ -477,6 +500,12 @@ void DrawButtons(GuiButtons *b, const int fontSize) {
   DrawText(b->btnSolve.text,
            b->btnSolve.postion.x + b->btnSolve.boundaryBox.width / 20,
            b->btnSolve.postion.y + b->btnSolve.boundaryBox.height / 4, fontSize,
+           WHITE);
+
+  DrawRectangleRec(b->btnReset.boundaryBox, b->btnReset.color);
+  DrawText(b->btnReset.text,
+           b->btnReset.postion.x + b->btnReset.boundaryBox.width / 20,
+           b->btnReset.postion.y + b->btnReset.boundaryBox.height / 4, fontSize,
            WHITE);
 }
 
@@ -533,11 +562,12 @@ int main(void) {
     // Update
 
     mousePoint = GetMousePosition();
-    gs.buttons->btnCreateVertex.action = false;
 
     if (gc.count >= 2) {
       HandleButtonClick(mousePoint, &gs.buttons->btnCreateEdge);
     }
+
+    HandleButtonClick(mousePoint, &gs.buttons->btnReset);
 
     if (ge.count > 0) {
       HandleButtonClick(mousePoint, &gs.buttons->btnSolve);
@@ -554,11 +584,16 @@ int main(void) {
 
     if (gs.buttons->btnCreateVertex.action) {
       RemoveGuiSolveItems(&sc, &se);
-      CreateVertex(defaultCircle, &gc, &ta);
+      CreateVertex(defaultCircle, &gc, &ta, &gs.buttons->btnCreateVertex);
     }
 
     if (gs.buttons->btnCreateEdge.action) {
       CreateEdge(&gc, mousePoint, &gs.buttons->btnCreateEdge, &gs, &ge);
+    }
+
+    if (gs.buttons->btnReset.action) {
+      RemoveGuiSolveItems(&sc, &se);
+      ClearGuiGraph(&gc, &ge, &ta, &gs.buttons->btnReset);
     }
 
     if (gs.buttons->btnSolve.action) {
@@ -593,6 +628,7 @@ int main(void) {
     SwitchColorOnState(&gs.buttons->btnCreateEdge.color,
                        gs.buttons->btnCreateEdge.state);
     SwitchColorOnState(&gs.buttons->btnSolve.color, gs.buttons->btnSolve.state);
+    SwitchColorOnState(&gs.buttons->btnReset.color, gs.buttons->btnReset.state);
 
     // Draw
     BeginDrawing();
@@ -652,6 +688,7 @@ int main(void) {
     EndDrawing();
   }
 
+  ClearGuiGraph(&gc, &ge, &ta, &gs.buttons->btnReset);
   CloseWindow();
 
   return 0;
